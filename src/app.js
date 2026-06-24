@@ -45,3 +45,9 @@ const classRouter = require("./routes/classRoutes");
 app.use("/api/v1/classes", classRouter);
 
 module.exports = app;
+
+// Register your dynamic Forums feature router node here!
+const forumRouter = require("./routes/forumRoutes");
+app.use("/api/v1/forums", forumRouter);
+
+module.exports = app;

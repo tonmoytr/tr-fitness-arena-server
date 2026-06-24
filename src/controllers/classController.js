@@ -1,3 +1,4 @@
+const { ObjectId } = require("mongodb");
 const { getDb } = require("../config/db");
 
 // Controller logic to fetch all approved classes from MongoDB Atlas
@@ -16,12 +17,32 @@ const getAllClasses = async (req, res) => {
     res.status(200).json(approvedClasses);
   } catch (error) {
     console.error("❌ Error inside getAllClasses Controller:", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Failed to retrieve approved classes from the database.",
-      });
+    res.status(500).json({
+      message: "Failed to retrieve approved classes from the database.",
+    });
   }
 };
 
-module.exports = { getAllClasses };
+const getClassById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDb();
+
+    const classData = await db
+      .collection("classes")
+      .findOne({ _id: new ObjectId(id) });
+
+    if (!classData) {
+      return res.status(404).json({ message: "Class not found." });
+    }
+
+    res.status(200).json(classData);
+  } catch (error) {
+    console.error("❌ Error inside getClassById Controller:", error.message);
+    res.status(500).json({
+      message: "Failed to retrieve class by ID from the database.",
+    });
+  }
+};
+
+module.exports = { getAllClasses, getClassById };
