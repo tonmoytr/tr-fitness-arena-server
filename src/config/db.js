@@ -1,42 +1,49 @@
-const { MongoClient } = require("mongodb");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 
-// Fallback to local MongoDB if .env isn't set up yet
-const MONGO_URI = "mongodb://127.0.0.1:27017";
+// Pull the secure string directly from our .env file
+const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = "tr_fitness_arena";
 
 let client;
 let dbInstance = null;
 
 async function connectDatabase() {
-  // If already connected, reuse the existing instance (Singleton Pattern)
   if (dbInstance) return dbInstance;
 
   try {
-    console.log("Connecting to MongoDB Client Pool...");
+    console.log("Initializing secure MongoDB Atlas client connection...");
 
+    // Using your exact configuration parameters from MongoDB
     client = new MongoClient(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      },
     });
 
-    // Establish the actual connection stream
+    // Connect to the Atlas cluster
     await client.connect();
 
+    // Ping the deployment to confirm connection health (Your exact ping check!)
+    await client.db("admin").command({ ping: 1 });
+
     dbInstance = client.db(DB_NAME);
-    console.log(`📡 MongoDB Connected Successfully to Database: "${DB_NAME}"`);
+    console.log(
+      `📡 Successfully pinged and connected to MongoDB Atlas: "${DB_NAME}"`,
+    );
 
     return dbInstance;
   } catch (error) {
-    console.error("❌ MongoDB Connection Failure Error:", error.message);
-    process.exit(1); // Kill the server instantly if the database fails to wake up
+    console.error("❌ Critical Database Connection Failure:", error.message);
+    process.exit(1);
   }
 }
 
-// Utility function to get the open database instance anywhere in our app
 function getDb() {
   if (!dbInstance) {
     throw new Error(
-      "Must call connectDatabase() before executing database operations.",
+      "Must call connectDatabase() before running transaction queries.",
     );
   }
   return dbInstance;
