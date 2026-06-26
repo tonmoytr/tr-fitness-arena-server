@@ -24,4 +24,7 @@ app.use("/api/v1/classes", classRouter);
 const forumRouter = require("./routes/forumRoutes");
 app.use("/api/v1/forums", forumRouter);
 
+const trainerRouter = require("./routes/trainerRoutes");
+app.use("/api/v1/trainers", trainerRouter);
+
 module.exports = app;
