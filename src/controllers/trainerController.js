@@ -324,6 +324,121 @@ const updateClassById = async (req, res) => {
   }
 };
 
+const createForumPost = async (req, res) => {
+  try {
+    const db = getDb();
+    const {
+      title,
+      content,
+      image,
+      authorId,
+      authorName,
+      authorEmail,
+      authorRole,
+    } = req.body;
+
+    if (!title || !content || !image) {
+      return res
+        .status(400)
+        .json({ message: "Missing required forum post content structures." });
+    }
+
+    const newPost = {
+      title,
+      slug: title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, ""),
+      category: "General",
+      image,
+      content,
+      author: {
+        id: authorId,
+        name: authorName,
+        email: authorEmail,
+        role: authorRole,
+      },
+      upvotes: [],
+      downvotes: [],
+      commentsCount: 0,
+      status: "Pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection("forums").insertOne(newPost);
+    return res.status(201).json({
+      message: "Forum post created successfully.",
+      postId: result.insertedId,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed logging forum contribution record.",
+      error: error.message,
+    });
+  }
+};
+
+// Fetch forum posts created exclusively by the logged-in trainer
+const getForumPostsByTrainer = async (req, res) => {
+  try {
+    const db = getDb();
+    const { authorId } = req.query;
+
+    if (!authorId) {
+      return res
+        .status(400)
+        .json({ message: "Missing author identity matrix mapping key." });
+    }
+
+    const posts = await db
+      .collection("forums")
+      .find({ "author.id": authorId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed tracking down author profile documents.",
+      error: error.message,
+    });
+  }
+};
+
+// Delete forum entry
+const deleteForumPostById = async (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Missing target forum asset identifier." });
+    }
+
+    const result = await db
+      .collection("forums")
+      .deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "Target forum article not found." });
+    }
+
+    return res
+      .status(200)
+      .json({ message: "Article pulled cleanly from public board arrays." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed executing erasure pipeline.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   handleTrainerApplication,
   getApplicationStatus,
@@ -333,4 +448,7 @@ module.exports = {
   getClassesByTrainer,
   deleteClassById,
   updateClassById,
+  createForumPost,
+  getForumPostsByTrainer,
+  deleteForumPostById,
 };

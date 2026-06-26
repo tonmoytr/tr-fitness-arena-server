@@ -10,6 +10,9 @@ const {
   getClassesByTrainer,
   deleteClassById,
   updateClassById,
+  createForumPost,
+  getForumPostsByTrainer,
+  deleteForumPostById,
 } = require("../controllers/trainerController");
 
 router.get("/status", getApplicationStatus);
@@ -24,5 +27,10 @@ router.get("/my-classes", getClassesByTrainer);
 router.delete("/classes/:id", deleteClassById);
 
 router.put("/classes/:id", updateClassById);
+
+router.post("/forums", createForumPost);
+
+router.get("/my-forums", getForumPostsByTrainer);
+router.delete("/forums/:id", deleteForumPostById);
 
 module.exports = router;
