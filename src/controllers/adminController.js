@@ -81,15 +81,160 @@ const authorizeTrainerApplication = async (req, res) => {
       .status(200)
       .json({ message: `Transaction authorized as ${clearStatus}` });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Identity update routing failed.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Identity update routing failed.",
+      error: error.message,
+    });
   }
 };
+
+const getAdminDashboardStats = async (req, res) => {
+  try {
+    const db = getDb();
+
+    // 1. Run parallel document counters and demographic groupings
+    const [userStats, totalClasses, classCategories] = await Promise.all([
+      // Group users by role to generate distribution percentages
+      db
+        .collection("user")
+        .aggregate([
+          {
+            $group: {
+              _id: "$role",
+              count: { $sum: 1 },
+            },
+          },
+        ])
+        .toArray(),
+
+      // Count total classes active across the system
+      db.collection("classes").countDocuments({}),
+
+      // Group classes by category to feed the bar chart visual metrics
+      db
+        .collection("classes")
+        .aggregate([
+          {
+            $group: {
+              _id: "$category",
+              count: { $sum: 1 },
+            },
+          },
+        ])
+        .toArray(),
+    ]);
+
+    // 2. Format user role distributions into a clean key-value dictionary block
+    const roleDistribution = { admin: 0, trainer: 0, user: 0 };
+    let totalUsersCount = 0;
+
+    userStats.forEach((item) => {
+      const roleKey = item._id ? item._id.toLowerCase() : "user";
+      if (roleDistribution.hasOwnProperty(roleKey)) {
+        roleDistribution[roleKey] = item.count;
+      }
+      totalUsersCount += item.count;
+    });
+
+    // 3. Format class category distributions into a reliable map block
+    const categoryDistribution = {};
+    classCategories.forEach((item) => {
+      const categoryKey = item._id || "General";
+      categoryDistribution[categoryKey] = item.count;
+    });
+
+    // 4. Dispatch the payload structure to the frontend gateway
+    return res.status(200).json({
+      totalUsers: totalUsersCount,
+      totalClasses: totalClasses,
+      estimatedRevenue: totalUsersCount * 49, // Temporary pricing matrix simulation until Stripe hook opens
+      roleDistribution,
+      categoryDistribution,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "System failure compiling administrative metrics data grid.",
+      error: error.message,
+    });
+  }
+};
+
+// GET: Retrieve all system users with basic credential matrices
+const getAllSystemUsers = async (req, res) => {
+  try {
+    const db = getDb();
+
+    // Fetch all accounts sorted by newest registrations first
+    const users = await db
+      .collection("user")
+      .find({})
+      .project({ password: 0 }) // Strict security measure: never leak password hashes down the pipeline
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed gathering user account registries.",
+      error: error.message,
+    });
+  }
+};
+
+// PATCH: Update authority role permissions across system nodes
+const updateUserRole = async (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!id || !role) {
+      return res
+        .status(400)
+        .json({ message: "Missing required modification parameters." });
+    }
+
+    const cleanRole = role.toLowerCase();
+    if (!["user", "trainer", "admin"].includes(cleanRole)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid role authority designation." });
+    }
+
+    // Update target account role
+    const result = await db
+      .collection("user")
+      .updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { role: cleanRole, updatedAt: new Date() } },
+      );
+
+    if (result.matchedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "Target account dossier not found." });
+    }
+
+    // Cascade role synchronizations down to active session tokens if applicable
+    await db
+      .collection("session")
+      .updateMany({ userId: id }, { $set: { role: cleanRole } });
+
+    return res.status(200).json({
+      message: `Account authority role updated to ${cleanRole} successfully.`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed updating target authorization matrix.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getPendingApplications,
   authorizeTrainerApplication,
+  getAdminDashboardStats,
+  getAllSystemUsers,
+  updateUserRole,
 };

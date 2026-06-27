@@ -475,6 +475,8 @@ const resetRejectedApplication = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   handleTrainerApplication,
   getApplicationStatus,
