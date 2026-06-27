@@ -23,7 +23,7 @@ async function connectDatabase() {
     });
 
     // Connect to the Atlas cluster
-    // await client.connect();
+    await client.connect();
 
     // Ping the deployment to confirm connection health (Your exact ping check!)
     await client.db("admin").command({ ping: 1 });
