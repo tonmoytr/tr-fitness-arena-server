@@ -19,7 +19,6 @@ const handleForumVote = async (req, res) => {
     if (!forumPost)
       return res.status(404).json({ message: "Forum post not found." });
 
-    // Initialize arrays if they don't exist yet
     const likedBy = forumPost.likedBy || [];
     const dislikedBy = forumPost.dislikedBy || [];
 
@@ -27,10 +26,8 @@ const handleForumVote = async (req, res) => {
 
     if (voteType === "like") {
       if (likedBy.includes(userId)) {
-        // Toggle Off: Already liked, remove it
         updateQuery = { $pull: { likedBy: userId } };
       } else {
-        // Toggle On: Add to likedBy, remove from dislikedBy
         updateQuery = {
           $addToSet: { likedBy: userId },
           $pull: { dislikedBy: userId },
@@ -38,10 +35,9 @@ const handleForumVote = async (req, res) => {
       }
     } else if (voteType === "dislike") {
       if (dislikedBy.includes(userId)) {
-        // Toggle Off: Already disliked, remove it
-        updateQuery = { $pull: { dislikedBy: dislikedBy } };
+        // FIXED: Changed dislikedBy to userId so it cleanly toggles off the user record string
+        updateQuery = { $pull: { dislikedBy: userId } };
       } else {
-        // Toggle On: Add to dislikedBy, remove from likedBy
         updateQuery = {
           $addToSet: { dislikedBy: userId },
           $pull: { likedBy: userId },
@@ -49,12 +45,10 @@ const handleForumVote = async (req, res) => {
       }
     }
 
-    // Apply the operation to MongoDB
     await db
       .collection("forums")
       .updateOne({ _id: new ObjectId(id) }, updateQuery);
 
-    // Fetch and return the fresh arrays back to the client immediately
     const updatedPost = await db
       .collection("forums")
       .findOne({ _id: new ObjectId(id) });
