@@ -1,8 +1,10 @@
 const { ObjectId } = require("mongodb");
-const { getDb } = require("../config/db");
+const { getDb, connectDatabase } = require("../config/db");
 
 const handleForumVote = async (req, res) => {
   try {
+    await connectDatabase();
+
     const db = getDb();
     const { id } = req.params;
     const { userId, voteType } = req.body;
@@ -71,6 +73,8 @@ const handleForumVote = async (req, res) => {
 // 2. COMMENT CRUD CONTROLLER
 const handleCommentAction = async (req, res) => {
   try {
+    await connectDatabase();
+
     const db = getDb();
     const { id } = req.params; // Forum Post ID
     const { action, commentId, userId, userName, userImage, text } = req.body;
@@ -142,6 +146,8 @@ const handleCommentAction = async (req, res) => {
 // Controller to pull down approved discussions in a chronological flow
 const getLatestForumPosts = async (req, res) => {
   try {
+    await connectDatabase();
+
     const db = getDb();
 
     const posts = await db
@@ -164,6 +170,8 @@ const getLatestForumPosts = async (req, res) => {
 
 const getForumPostById = async (req, res) => {
   try {
+    await connectDatabase();
+
     const { id } = req.params;
     const db = getDb();
 
