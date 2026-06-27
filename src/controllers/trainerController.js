@@ -460,22 +460,108 @@ const resetRejectedApplication = async (req, res) => {
         .json({ message: "No matching rejected document found to clear." });
     }
 
-    return res
-      .status(200)
-      .json({
-        message: "Application history successfully purged from registry.",
-      });
+    return res.status(200).json({
+      message: "Application history successfully purged from registry.",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed executing reset pipeline.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed executing reset pipeline.",
+      error: error.message,
+    });
   }
 };
 
+// POST: Register a new athletic training class module slot
+const createTrainerClass = async (req, res) => {
+  try {
+    const db = getDb();
 
+    // Explicitly destructure all custom properties matching your frontend payload key-for-key
+    const {
+      className,
+      image,
+      category,
+      difficultyLevel,
+      duration,
+      price,
+      description,
+      time,
+      days,
+      trainerId,
+      trainerName,
+      trainerEmail,
+    } = req.body;
+
+    // 1. Strict Structural Validation Gate
+    if (
+      !trainerId ||
+      !className ||
+      !image ||
+      !category ||
+      !difficultyLevel ||
+      !duration ||
+      !price ||
+      !description ||
+      !time ||
+      !days ||
+      !days.length
+    ) {
+      return res
+        .status(400)
+        .json({
+          message: "Validation failure. All structure criteria are mandatory.",
+        });
+    }
+
+    // 2. Identity Verification: Secure permission check
+    const user = await db
+      .collection("user")
+      .findOne({ _id: new ObjectId(trainerId) });
+    if (!user || user.role !== "trainer") {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Access denied. Only certified coaches can allocate schedules.",
+        });
+    }
+
+    // 3. Packaging clean document object schema matching your database requirements
+    const newClassDocument = {
+      trainerId,
+      trainerName,
+      trainerEmail,
+      trainerImage: user.image || null, // Capture avatar dynamically if available on user profile
+      className: className.trim(),
+      image: image.trim(),
+      category: category.trim(),
+      difficultyLevel: difficultyLevel.trim(),
+      duration: Number(duration),
+      price: Number(price),
+      time: time.trim(),
+      days: days, // Saves the structured array e.g., ["Mon", "Wed"]
+      description: description.trim(),
+      status: "pending", // Appends moderation status cleanly matching image_6f29e6.png
+      enrolledMembers: [], // Empty tracker ready for user signups later
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // 4. Commit to Atlas
+    const result = await db.collection("classes").insertOne(newClassDocument);
+
+    return res.status(201).json({
+      message:
+        "Training routine matrix successfully committed to pending logs.",
+      classId: result.insertedId,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to compile and execute routine allocation.",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   handleTrainerApplication,
@@ -490,4 +576,5 @@ module.exports = {
   getForumPostsByTrainer,
   deleteForumPostById,
   resetRejectedApplication,
+  createTrainerClass,
 };

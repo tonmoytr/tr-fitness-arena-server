@@ -9,7 +9,7 @@ const getAllClasses = async (req, res) => {
     // Pro Strategy: Filter by "Approved" status to protect public views
     const approvedClasses = await db
       .collection("classes")
-      .find({ status: "Approved" })
+      .find({ status: "approved" })
       .sort({ createdAt: -1 }) // Newly added classes show up first
       .toArray();
 

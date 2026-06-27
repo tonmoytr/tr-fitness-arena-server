@@ -14,6 +14,7 @@ const {
   getForumPostsByTrainer,
   deleteForumPostById,
   resetRejectedApplication,
+  createTrainerClass,
 } = require("../controllers/trainerController");
 
 router.get("/status", getApplicationStatus);
@@ -35,5 +36,7 @@ router.get("/my-forums", getForumPostsByTrainer);
 router.delete("/forums/:id", deleteForumPostById);
 
 router.delete("/applications/reset", resetRejectedApplication);
+
+router.post("/classes", createTrainerClass);
 
 module.exports = router;

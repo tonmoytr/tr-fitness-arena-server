@@ -231,10 +231,123 @@ const updateUserRole = async (req, res) => {
   }
 };
 
+// GET: Retrieve all system classes (Pending items prioritized for immediate auditing)
+// const getAllSystemClasses = async (req, res) => {
+//   try {
+//     const db = getDb();
+
+//     const classes = await db
+//       .collection("classes")
+//       .find({})
+//       .sort({ status: -1, createdAt: -1 }) // Aligns 'pending' statuses alphabetically/chronologically to the top
+//       .toArray();
+
+//     return res.status(200).json(classes);
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Failed gathering global class registry records.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// GET: Retrieve all system classes (Pending items prioritized for immediate auditing)
+const getAllSystemClasses = async (req, res) => {
+  try {
+    const db = getDb();
+    const classes = await db
+      .collection("classes")
+      .find({})
+      .sort({ status: -1, createdAt: -1 })
+      .toArray();
+    return res.status(200).json(classes);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed gathering global class registry records.",
+      error: error.message,
+    });
+  }
+};
+
+// PATCH: Approve or Reject a training routine template split
+const updateClassStatus = async (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!id || !status) {
+      return res
+        .status(400)
+        .json({ message: "Missing required modification status key inputs." });
+    }
+
+    const cleanStatus = status.toLowerCase();
+
+    const result = await db
+      .collection("classes")
+      .updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: cleanStatus, updatedAt: new Date() } },
+      );
+
+    if (result.matchedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "Target routine template not found." });
+    }
+
+    return res.status(200).json({
+      message: `Routine status successfully updated to ${cleanStatus}.`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed executing database state mutation on target class.",
+      error: error.message,
+    });
+  }
+};
+
+// DELETE: Permanent structural purge of a routine item block
+const deleteSystemClass = async (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Missing explicit system document identifier." });
+    }
+
+    const result = await db
+      .collection("classes")
+      .deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        message: "No matching class entry located to execute drop command.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Class routine permanently dropped from active registries.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed deleting routine documentation data node.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getPendingApplications,
   authorizeTrainerApplication,
   getAdminDashboardStats,
   getAllSystemUsers,
   updateUserRole,
+  getAllSystemClasses,
+  updateClassStatus,
+  deleteSystemClass,
 };

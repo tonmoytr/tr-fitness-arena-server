@@ -146,7 +146,7 @@ const getLatestForumPosts = async (req, res) => {
 
     const posts = await db
       .collection("forums")
-      .find({ status: "Approved" })
+      .find({ status: "approved" })
       .sort({ createdAt: -1 }) // Sort newest directly inside MongoDB (Much faster than JS memory sort!)
       .toArray();
 
