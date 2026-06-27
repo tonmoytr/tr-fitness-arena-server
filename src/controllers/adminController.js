@@ -1,4 +1,4 @@
-const { getDb } = require("../config/db");
+const { getDb, connectDatabase } = require("../config/db");
 const { ObjectId } = require("mongodb");
 
 // GET: Fetch all pending applications from the correct collection
@@ -254,6 +254,8 @@ const updateUserRole = async (req, res) => {
 // GET: Retrieve all system classes (Pending items prioritized for immediate auditing)
 const getAllSystemClasses = async (req, res) => {
   try {
+    await connectDatabase();
+
     const db = getDb();
     const classes = await db
       .collection("classes")
@@ -272,6 +274,8 @@ const getAllSystemClasses = async (req, res) => {
 // PATCH: Approve or Reject a training routine template split
 const updateClassStatus = async (req, res) => {
   try {
+    await connectDatabase();
+
     const db = getDb();
     const { id } = req.params;
     const { status } = req.body;
@@ -311,6 +315,8 @@ const updateClassStatus = async (req, res) => {
 // DELETE: Permanent structural purge of a routine item block
 const deleteSystemClass = async (req, res) => {
   try {
+    await connectDatabase();
+
     const db = getDb();
     const { id } = req.params;
 

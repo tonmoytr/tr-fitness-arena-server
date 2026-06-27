@@ -1,19 +1,22 @@
 const { ObjectId } = require("mongodb");
-const { getDb } = require("../config/db");
+const { getDb, connectDatabase } = require("../config/db");
 
 // Controller logic to fetch all approved classes from MongoDB Atlas
 const getAllClasses = async (req, res) => {
   try {
+    // 1. SERVERLESS GUARD: Await connection resolution before continuing
+    // If already connected, this returns instantly. If cold starting, it waits for the connection to establish.
+    await connectDatabase();
+
     const db = getDb();
 
-    // Pro Strategy: Filter by "Approved" status to protect public views
+    // 2. Execute target document lookup matching our lowercase structural filter
     const approvedClasses = await db
       .collection("classes")
       .find({ status: "approved" })
-      .sort({ createdAt: -1 }) // Newly added classes show up first
+      .sort({ createdAt: -1 })
       .toArray();
 
-    // Send data back to frontend with standard HTTP 200 Success status
     res.status(200).json(approvedClasses);
   } catch (error) {
     console.error("❌ Error inside getAllClasses Controller:", error.message);
@@ -156,12 +159,10 @@ const getUserFavorites = async (req, res) => {
 
     return res.status(200).json({ favorites: classes });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to retrieve favorites stream.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to retrieve favorites stream.",
+      error: error.message,
+    });
   }
 };
 
@@ -190,12 +191,10 @@ const handleDeleteFavorite = async (req, res) => {
       .status(200)
       .json({ message: "🗑️ Removed from favorites collection." });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to drop favorite entry.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to drop favorite entry.",
+      error: error.message,
+    });
   }
 };
 
