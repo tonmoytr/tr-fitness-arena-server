@@ -13,6 +13,7 @@ const {
   createForumPost,
   getForumPostsByTrainer,
   deleteForumPostById,
+  resetRejectedApplication,
 } = require("../controllers/trainerController");
 
 router.get("/status", getApplicationStatus);
@@ -32,5 +33,7 @@ router.post("/forums", createForumPost);
 
 router.get("/my-forums", getForumPostsByTrainer);
 router.delete("/forums/:id", deleteForumPostById);
+
+router.delete("/applications/reset", resetRejectedApplication);
 
 module.exports = router;

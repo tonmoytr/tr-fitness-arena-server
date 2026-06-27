@@ -27,4 +27,7 @@ app.use("/api/v1/forums", forumRouter);
 const trainerRouter = require("./routes/trainerRoutes");
 app.use("/api/v1/trainers", trainerRouter);
 
+const adminRoutes = require("./routes/adminRoutes");
+app.use("/api/v1/admin", adminRoutes);
+
 module.exports = app;

@@ -5,24 +5,25 @@ const { ObjectId } = require("mongodb");
 const getApplicationStatus = async (req, res) => {
   try {
     const db = getDb();
-    const { userId } = req.query; // Passed via ?userId=xyz
+    const { userId } = req.query;
 
     if (!userId) {
-      return res
-        .status(400)
-        .json({ message: "Missing identification parameter." });
+      return res.status(400).json({
+        message: "Missing tracking user identification query parameters.",
+      });
     }
 
+    // FIXED: Target the collection and sort to guarantee we get the active matrix record
     const application = await db
       .collection("trainer_applications")
-      .findOne({ userId });
+      .find({ userId: userId })
+      .sort({ updatedAt: -1, createdAt: -1 }) // Get the absolute newest document first
+      .limit(1)
+      .toArray();
 
-    // Return the record if found, otherwise return null
-    return res.status(200).json({ application });
+    return res.status(200).json(application[0] || null);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Status verification breakdown", error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -32,43 +33,38 @@ const handleTrainerApplication = async (req, res) => {
     const db = getDb();
     const { userId, name, email, image, experience, specialty } = req.body;
 
-    if (!userId || !experience || !specialty) {
+    if (!userId || !name || !email || !experience || !specialty) {
       return res
         .status(400)
-        .json({ message: "Missing required onboarding parameters." });
+        .json({ message: "Validation failure. Missing key attributes." });
     }
 
-    // HARD BLOCK DUPLICATES: Check if this user already has any application record
-    const existingApplication = await db
-      .collection("trainer_applications")
-      .findOne({ userId });
-    if (existingApplication) {
-      return res.status(400).json({
-        message: `Action restricted. You already have an application with status: ${existingApplication.status}`,
-      });
-    }
+    // FIXED: Enforce a single document per user using updateOne + upsert
+    await db.collection("trainer_applications").updateOne(
+      { userId: userId }, // Find by unique user ID
+      {
+        $set: {
+          name,
+          email,
+          image,
+          experience: Number(experience),
+          specialty,
+          status: "pending", // Reset back to pending immediately
+          feedback: null, // Wipe out the old rejection reason completely
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }, // If it doesn't exist, create it; if it does, overwrite it!
+    );
 
-    const applicationData = {
-      userId,
-      name,
-      email,
-      image,
-      experience: parseInt(experience),
-      specialty,
-      status: "pending", // Default assignment status remains pending
-      feedback: null,
-      createdAt: new Date(),
-    };
-
-    await db.collection("trainer_applications").insertOne(applicationData);
     return res
-      .status(201)
-      .json({ message: "Trainer onboarding request logged successfully!" });
+      .status(200)
+      .json({ message: "Application logged successfully in system pipeline." });
   } catch (error) {
-    res.status(500).json({
-      message: "Application pipeline processing failure",
-      error: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -439,6 +435,46 @@ const deleteForumPostById = async (req, res) => {
   }
 };
 
+// DELETE: Reset application history for a rejected user
+// DELETE: Clean out a user's rejected application history
+const resetRejectedApplication = async (req, res) => {
+  try {
+    const db = getDb();
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ message: "Missing required user identity mapping matrix." });
+    }
+
+    // FIXED: Target status: "rejected" to match what is actually written in your database
+    const result = await db.collection("trainer_applications").deleteOne({
+      userId: userId,
+      status: "rejected",
+    });
+
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "No matching rejected document found to clear." });
+    }
+
+    return res
+      .status(200)
+      .json({
+        message: "Application history successfully purged from registry.",
+      });
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        message: "Failed executing reset pipeline.",
+        error: error.message,
+      });
+  }
+};
+
 module.exports = {
   handleTrainerApplication,
   getApplicationStatus,
@@ -451,4 +487,5 @@ module.exports = {
   createForumPost,
   getForumPostsByTrainer,
   deleteForumPostById,
+  resetRejectedApplication,
 };
