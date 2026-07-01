@@ -101,9 +101,17 @@ const checkClassStatus = async (req, res) => {
       return res.status(400).json({ message: "Missing user identity token." });
     }
 
+    // Convert class ID to ObjectId safely, falling back to string if invalid hex
+    let classObjectId;
+    try {
+      classObjectId = new ObjectId(id);
+    } catch (err) {
+      classObjectId = id;
+    }
+
     // Validation: Check bookings collection to see if logged-in user booked it
     const hasBooked = await db.collection("bookings").findOne({
-      classId: id,
+      classId: classObjectId,
       userId: userId,
       paymentStatus: "paid", // Ensures checkout loop was completed successfully
     });

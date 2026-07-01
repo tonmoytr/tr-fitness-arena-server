@@ -33,4 +33,7 @@ app.use("/api/v1/trainers", trainerRouter);
 const adminRoutes = require("./routes/adminRoutes");
 app.use("/api/v1/admin", adminRoutes);
 
+const bookingRouter = require("./routes/bookingRoutes");
+app.use("/api/v1", bookingRouter);
+
 module.exports = app;
